@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAMU HQ — Tableau de Bord</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #e63946;
+    --red-dark: #b5202d;
+    --bg: #0a0b0e;
+    --bg2: #111318;
+    --bg3: #181b22;
+    --border: #1e222c;
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --accent: #e63946;
+    --green: #2ecc71;
+    --orange: #f39c12;
+    --blue: #3498db;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  /* LOGIN */
+  #login-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .login-box { background: var(--bg2); border: 1px solid var(--border); border-top: 3px solid var(--red); padding: 48px 40px; width: 380px; animation: fadeUp .4s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+  .login-logo { font-family: 'Bebas Neue'; font-size: 42px; color: var(--red); letter-spacing: 4px; margin-bottom: 4px; }
+  .login-sub { font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 36px; font-family: 'DM Mono'; }
+  .login-box label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 8px; font-family: 'DM Mono'; }
+  .login-box input { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; font-family: 'DM Mono'; font-size: 14px; outline: none; margin-bottom: 20px; transition: border-color .2s; }
+  .login-box input:focus { border-color: var(--red); }
+  .login-btn { width: 100%; background: var(--red); border: none; color: white; font-family: 'Bebas Neue'; font-size: 20px; letter-spacing: 3px; padding: 14px; cursor: pointer; transition: background .2s; margin-top: 4px; }
+  .login-btn:hover { background: var(--red-dark); }
+  .login-error { color: var(--red); font-size: 12px; margin-top: 12px; font-family: 'DM Mono'; display: none; }
+  .login-loader { text-align:center; font-family:'DM Mono'; font-size:12px; color:var(--muted); margin-top:12px; display:none; }
+
+  /* APP */
+  #app { display: none; }
+  .sidebar { position: fixed; left:0; top:0; bottom:0; width:220px; background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:100; }
+  .sidebar-logo { padding: 24px 20px 20px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo .title { font-family:'Bebas Neue'; font-size:28px; color:var(--red); letter-spacing:3px; }
+  .sidebar-logo .sub { font-size:10px; color:var(--muted); letter-spacing:2px; font-family:'DM Mono'; }
+  .nav { flex:1; padding:16px 0; }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:11px 20px; cursor:pointer; color:var(--muted); font-size:13px; font-weight:500; transition:all .15s; border-left:3px solid transparent; }
+  .nav-item:hover { color:var(--text); background:var(--bg3); }
+  .nav-item.active { color:var(--red); border-left-color:var(--red); background:rgba(230,57,70,.07); }
+  .nav-item .icon { font-size:16px; width:20px; text-align:center; }
+  .sidebar-footer { padding:16px 20px; border-top:1px solid var(--border); }
+  .user-info { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); }
+  .user-avatar { width:30px; height:30px; background:var(--red); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue'; font-size:14px; color:white; }
+  .logout-btn { background:none; border:none; color:var(--muted); font-size:11px; cursor:pointer; margin-top:8px; font-family:'DM Mono'; letter-spacing:1px; text-transform:uppercase; padding:0; transition:color .15s; }
+  .logout-btn:hover { color:var(--red); }
+  .main { margin-left:220px; min-height:100vh; padding:32px; }
+  .page { display:none; animation:fadeUp .3s ease; }
+  .page.active { display:block; }
+  .page-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:28px; border-bottom:1px solid var(--border); padding-bottom:20px; }
+  .page-title { font-family:'Bebas Neue'; font-size:36px; letter-spacing:2px; line-height:1; }
+  .page-title span { color:var(--red); }
+  .page-sub { font-size:12px; color:var(--muted); font-family:'DM Mono'; margin-top:4px; }
+  .cards-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+  .card { background:var(--bg2); border:1px solid var(--border); padding:20px; position:relative; overflow:hidden; }
+  .card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--accent-color, var(--red)); }
+  .card-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; font-family:'DM Mono'; margin-bottom:10px; }
+  .card-value { font-family:'Bebas Neue'; font-size:44px; color:var(--text); line-height:1; }
+  .card-icon { position:absolute; right:16px; top:16px; font-size:28px; opacity:.15; }
+  .table-wrap { background:var(--bg2); border:1px solid var(--border); overflow:hidden; margin-bottom:24px; }
+  .table-header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .table-title { font-family:'Bebas Neue'; font-size:18px; letter-spacing:2px; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:var(--bg3); }
+  th { padding:10px 16px; text-align:left; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; font-family:'DM Mono'; border-bottom:1px solid var(--border); }
+  td { padding:12px 16px; font-size:13px; border-bottom:1px solid rgba(30,34,44,.8); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,.02); }
+  .badge { display:inline-block; padding:3px 10px; font-size:10px; font-family:'DM Mono'; letter-spacing:1px; text-transform:uppercase; border-radius:2px; }
+  .badge-green { background:rgba(46,204,113,.15); color:var(--green); border:1px solid rgba(46,204,113,.3); }
+  .badge-red { background:rgba(230,57,70,.15); color:var(--red); border:1px solid rgba(230,57,70,.3); }
+  .badge-orange { background:rgba(243,156,18,.15); color:var(--orange); border:1px solid rgba(243,156,18,.3); }
+  .badge-blue { background:rgba(52,152,219,.15); color:var(--blue); border:1px solid rgba(52,152,219,.3); }
+  .badge-muted { background:rgba(90,96,112,.15); color:var(--muted); border:1px solid rgba(90,96,112,.3); }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .form-full { grid-column:1/-1; }
+  .form-group { display:flex; flex-direction:column; gap:6px; }
+  .form-group label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; font-family:'DM Mono'; }
+  .form-group input, .form-group select, .form-group textarea { background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:10px 14px; font-family:'DM Sans'; font-size:13px; outline:none; transition:border-color .2s; resize:vertical; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--red); }
+  .form-group select option { background:var(--bg3); }
+  .btn { padding:10px 22px; border:none; cursor:pointer; font-family:'Bebas Neue'; font-size:16px; letter-spacing:2px; transition:all .2s; }
+  .btn-primary { background:var(--red); color:white; }
+  .btn-primary:hover { background:var(--red-dark); }
+  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+  .btn-ghost:hover { color:var(--text); border-color:var(--text); }
+  .btn-danger { background:transparent; color:var(--red); border:1px solid var(--red); }
+  .btn-danger:hover { background:var(--red); color:white; }
+  .btn-sm { padding:5px 12px; font-size:12px; }
+  .form-actions { display:flex; gap:10px; margin-top:8px; }
+  .section { background:var(--bg2); border:1px solid var(--border); padding:24px; margin-bottom:20px; }
+  .section-title { font-family:'Bebas Neue'; font-size:18px; letter-spacing:2px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .lb-row { display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .lb-row:last-child { border-bottom:none; }
+  .lb-rank { font-family:'Bebas Neue'; font-size:28px; color:var(--muted); width:36px; text-align:center; }
+  .lb-rank.gold { color:#f1c40f; } .lb-rank.silver { color:#bdc3c7; } .lb-rank.bronze { color:#e67e22; }
+  .lb-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue'; font-size:16px; color:white; flex-shrink:0; }
+  .lb-info { flex:1; }
+  .lb-name { font-weight:600; font-size:14px; }
+  .lb-meta { font-size:11px; color:var(--muted); font-family:'DM Mono'; margin-top:2px; }
+  .lb-bar-wrap { width:140px; }
+  .lb-bar-bg { background:var(--border); height:4px; border-radius:2px; overflow:hidden; }
+  .lb-bar { height:100%; background:var(--red); border-radius:2px; transition:width .6s ease; }
+  .lb-score { font-family:'Bebas Neue'; font-size:22px; width:60px; text-align:right; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:500; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--bg2); border:1px solid var(--border); border-top:3px solid var(--red); padding:32px; width:560px; max-width:95vw; animation:fadeUp .25s ease; max-height:90vh; overflow-y:auto; position:relative; }
+  .modal-title { font-family:'Bebas Neue'; font-size:24px; letter-spacing:2px; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .modal-close { position:absolute; top:16px; right:20px; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .dot-green { background:var(--green); box-shadow:0 0 6px var(--green); }
+  ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:var(--bg); } ::-webkit-scrollbar-thumb { background:var(--border); }
+  .alert { position:fixed; bottom:24px; right:24px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--green); padding:14px 20px; font-size:13px; font-family:'DM Mono'; z-index:9999; display:none; animation:slideIn .3s ease; }
+  @keyframes slideIn { from{transform:translateX(100px);opacity:0;} to{transform:translateX(0);opacity:1;} }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .api-status { font-size:11px; font-family:'DM Mono'; padding:4px 10px; border-radius:2px; }
+  .api-ok { color:var(--green); } .api-err { color:var(--red); }
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--red); border-radius:50%; animation:spin .6s linear infinite; margin-right:6px; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">SAMU HQ</div>
+    <div class="login-sub">Système de Gestion des Interventions</div>
+    <label>Identifiant</label>
+    <input type="text" id="login-user" placeholder="admin" autocomplete="off">
+    <label>Mot de passe</label>
+    <input type="password" id="login-pass" placeholder="••••••••">
+    <button class="login-btn" onclick="doLogin()">CONNEXION</button>
+    <div class="login-error" id="login-err">❌ Identifiants incorrects</div>
+    <div class="login-loader" id="login-loader"><span class="spinner"></span>Connexion en cours...</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="title">SAMU HQ</div>
+      <div class="sub">Panel de Gestion</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="goTo('dashboard',this)"><span class="icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="goTo('rapports',this)"><span class="icon">📋</span> Rapports</div>
+      <div class="nav-item" onclick="goTo('services',this)"><span class="icon">🕐</span> Historique Services</div>
+      <div class="nav-item" onclick="goTo('patients',this)"><span class="icon">🏥</span> Dossiers Patients</div>
+      <div class="nav-item" onclick="goTo('membres',this)"><span class="icon">👥</span> Membres</div>
+      <div class="nav-item" onclick="goTo('leaderboard',this)"><span class="icon">🏆</span> Leaderboard</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="sidebar-avatar">A</div>
+        <div>
+          <div id="sidebar-username" style="font-weight:600;font-size:13px;color:var(--text)">Admin</div>
+          <div id="sidebar-role" style="font-size:10px;font-family:'DM Mono';color:var(--muted)">Administrateur</div>
+        </div>
+      </div>
+      <div id="api-status-indicator" class="api-status api-ok" style="margin-top:8px">● API connectée</div>
+      <button class="logout-btn" onclick="doLogout()">⬛ Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">DASH<span>BOARD</span></div>
+          <div class="page-sub" id="dash-date"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:'DM Mono';color:var(--green)">
+          <span class="dot dot-green"></span> SYSTÈME EN LIGNE
+        </div>
+      </div>
+      <div class="cards-row">
+        <div class="card" style="--accent-color:var(--red)"><div class="card-label">Rapports aujourd'hui</div><div class="card-value" id="dash-interventions">—</div><div class="card-icon">🚨</div></div>
+        <div class="card" style="--accent-color:var(--blue)"><div class="card-label">Patients actifs</div><div class="card-value" id="dash-patients">—</div><div class="card-icon">🏥</div></div>
+        <div class="card" style="--accent-color:var(--green)"><div class="card-label">Total membres</div><div class="card-value" id="dash-membres">—</div><div class="card-icon">👥</div></div>
+        <div class="card" style="--accent-color:var(--orange)"><div class="card-label">Total services</div><div class="card-value" id="dash-services">—</div><div class="card-icon">⏳</div></div>
+      </div>
+      <div class="two-col">
+        <div class="table-wrap">
+          <div class="table-header"><div class="table-title">DERNIERS RAPPORTS</div></div>
+          <table><thead><tr><th>Date</th><th>Type</th><th>Auteur</th><th>Statut</th></tr></thead><tbody id="dash-rapports-table"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;font-family:'DM Mono'"><span class="spinner"></span>Chargement...</td></tr></tbody></table>
+        </div>
+        <div class="table-wrap">
+          <div class="table-header"><div class="table-title">DERNIERS SERVICES</div></div>
+          <table><thead><tr><th>Membre</th><th>Grade</th><th>Durée</th></tr></thead><tbody id="dash-services-table"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;font-family:'DM Mono'"><span class="spinner"></span>Chargement...</td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAPPORTS -->
+    <div class="page" id="page-rapports">
+      <div class="page-header">
+        <div><div class="page-title">RAP<span>PORTS</span></div><div class="page-sub">Gestion des rapports d'intervention</div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-rapport')">+ NOUVEAU RAPPORT</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">TOUS LES RAPPORTS</div>
+          <input type="text" id="search-rapports" placeholder="Rechercher..." style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;font-size:12px;font-family:'DM Mono';outline:none;width:200px;" oninput="filterTable('rapports-table',this.value)">
+        </div>
+        <table><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Lieu</th><th>Auteur</th><th>Gravité</th><th>Statut</th><th>Action</th></tr></thead><tbody id="rapports-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="page" id="page-services">
+      <div class="page-header">
+        <div><div class="page-title">HISTO<span>RIQUE</span></div><div class="page-sub">Historique des prises de service</div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-service')">+ AJOUTER SERVICE</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title">SERVICES</div></div>
+        <table><thead><tr><th>Membre</th><th>Grade</th><th>Début</th><th>Fin</th><th>Durée</th><th>Action</th></tr></thead><tbody id="services-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- PATIENTS -->
+    <div class="page" id="page-patients">
+      <div class="page-header">
+        <div><div class="page-title">DOS<span>SIERS</span></div><div class="page-sub">Gestion des dossiers patients</div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-patient')">+ NOUVEAU DOSSIER</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <div class="table-title">PATIENTS</div>
+          <input type="text" id="search-patients" placeholder="Rechercher..." style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;font-size:12px;font-family:'DM Mono';outline:none;width:200px;" oninput="filterTable('patients-table',this.value)">
+        </div>
+        <table><thead><tr><th>#</th><th>Patient</th><th>Motif</th><th>Gravité</th><th>Médecin</th><th>Date</th><th>Statut</th><th>Action</th></tr></thead><tbody id="patients-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- MEMBRES -->
+    <div class="page" id="page-membres">
+      <div class="page-header">
+        <div><div class="page-title">MEM<span>BRES</span></div><div class="page-sub">Gestion de l'équipe SAMU</div></div>
+        <button class="btn btn-primary" onclick="openModal('modal-membre')">+ AJOUTER MEMBRE</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header"><div class="table-title">ÉQUIPE</div></div>
+        <table><thead><tr><th>Membre</th><th>Grade</th><th>Services</th><th>Statut</th><th>Warns</th><th>Action</th></tr></thead><tbody id="membres-table"></tbody></table>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="page" id="page-leaderboard">
+      <div class="page-header">
+        <div><div class="page-title">LEADER<span>BOARD</span></div><div class="page-sub">Classement des membres les plus actifs</div></div>
+      </div>
+      <div class="two-col">
+        <div class="section"><div class="section-title">🏆 TOP SERVICES</div><div id="lb-services"></div></div>
+        <div class="section"><div class="section-title">⏳ TOP HEURES</div><div id="lb-heures"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-rapport">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-rapport')">✕</button>
+    <div class="modal-title">📋 NOUVEAU RAPPORT</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Type</label><select id="r-type"><option>Accident de la route</option><option>Malaise cardiaque</option><option>Traumatisme</option><option>Intoxication</option><option>Accouchement</option><option>Autre urgence</option></select></div>
+      <div class="form-group"><label>Lieu</label><input type="text" id="r-lieu" placeholder="ex: Rue de la Paix"></div>
+      <div class="form-group"><label>Auteur</label><input type="text" id="r-auteur" placeholder="Pseudo Discord"></div>
+      <div class="form-group"><label>Membres présents</label><input type="text" id="r-membres" placeholder="Séparés par virgule"></div>
+      <div class="form-group"><label>Gravité</label><select id="r-gravite"><option value="faible">🟢 Faible</option><option value="modere">🟡 Modéré</option><option value="grave">🟠 Grave</option><option value="critique">🔴 Critique</option></select></div>
+      <div class="form-group"><label>Statut</label><select id="r-statut"><option value="en_cours">En cours</option><option value="termine">Terminé</option><option value="transfere">Transféré</option></select></div>
+      <div class="form-group form-full"><label>Description</label><textarea id="r-desc" rows="4" placeholder="Détails de l'intervention..."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addRapport()">ENREGISTRER</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-rapport')">ANNULER</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-patient">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-patient')">✕</button>
+    <div class="modal-title">🏥 NOUVEAU DOSSIER PATIENT</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Nom du patient</label><input type="text" id="p-nom" placeholder="Nom Prénom (RP)"></div>
+      <div class="form-group"><label>Médecin en charge</label><input type="text" id="p-medecin" placeholder="Pseudo Discord"></div>
+      <div class="form-group"><label>Motif d'admission</label><input type="text" id="p-motif" placeholder="Raison de la prise en charge"></div>
+      <div class="form-group"><label>Gravité</label><select id="p-gravite"><option value="stable">🟢 Stable</option><option value="modere">🟡 Modéré</option><option value="grave">🟠 Grave</option><option value="critique">🔴 Critique</option></select></div>
+      <div class="form-group"><label>Statut</label><select id="p-statut"><option value="en_cours">En traitement</option><option value="sorti">Sorti</option><option value="transfere">Transféré</option><option value="decede">Décédé</option></select></div>
+      <div class="form-group form-full"><label>Notes médicales</label><textarea id="p-notes" rows="3" placeholder="Observations, traitements..."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addPatient()">ENREGISTRER</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-patient')">ANNULER</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-service">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-service')">✕</button>
+    <div class="modal-title">🕐 AJOUTER SERVICE</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Membre</label><input type="text" id="s-membre" placeholder="Pseudo Discord"></div>
+      <div class="form-group"><label>Grade</label><select id="s-grade"><option>Médecin urgentiste</option><option>Infirmier(e)</option><option>Ambulancier(e)</option><option>Régulateur(trice)</option><option>Stagiaire</option></select></div>
+      <div class="form-group"><label>Début de service</label><input type="datetime-local" id="s-debut"></div>
+      <div class="form-group"><label>Fin de service</label><input type="datetime-local" id="s-fin"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addService()">ENREGISTRER</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-service')">ANNULER</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-membre">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-membre')">✕</button>
+    <div class="modal-title">👤 AJOUTER MEMBRE</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Pseudo Discord</label><input type="text" id="m-pseudo" placeholder="pseudo"></div>
+      <div class="form-group"><label>Grade</label><select id="m-grade"><option>Médecin urgentiste</option><option>Infirmier(e)</option><option>Ambulancier(e)</option><option>Régulateur(trice)</option><option>Stagiaire</option></select></div>
+      <div class="form-group"><label>Statut</label><select id="m-statut"><option value="actif">Actif</option><option value="inactif">Inactif</option><option value="suspendu">Suspendu</option></select></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="addMembre()">ENREGISTRER</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-membre')">ANNULER</button>
+    </div>
+  </div>
+</div>
+
+<div class="alert" id="alert-box">✅ Enregistré</div>
+
+<script>
+// ══════════════════════════════════════
+//  CONFIG — remplace par ton URL Railway
+// ══════════════════════════════════════
+const API_URL = "https://web-XXXXXX.up.railway.app";
+
+let currentUser = null;
+let currentRole = null;
+
+// ─── API HELPER ───
+async function api(method, endpoint, body = null) {
+  try {
+    const opts = {
+      method,
+      headers: { "Content-Type": "application/json" }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API_URL + endpoint, opts);
+    if (!res.ok) throw new Error(res.status);
+    return await res.json();
+  } catch(e) {
+    console.error("API error:", e);
+    document.getElementById('api-status-indicator').textContent = "● API hors ligne";
+    document.getElementById('api-status-indicator').className = "api-status api-err";
+    return null;
+  }
+}
+
+// ─── AUTH ───
+async function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  document.getElementById('login-loader').style.display = 'block';
+  document.getElementById('login-err').style.display = 'none';
+
+  const res = await api('POST', '/auth/login', { username: u, password: p });
+
+  document.getElementById('login-loader').style.display = 'none';
+
+  if (res && res.success) {
+    currentUser = res.username;
+    currentRole = res.role;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('sidebar-username').textContent = currentUser;
+    document.getElementById('sidebar-avatar').textContent = currentUser[0].toUpperCase();
+    document.getElementById('sidebar-role').textContent = currentRole === 'admin' ? 'Administrateur' : 'Membre';
+    initDashboard();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// ─── NAV ───
+function goTo(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+  const loaders = { dashboard: initDashboard, rapports: loadRapports, services: loadServices, patients: loadPatients, membres: loadMembres, leaderboard: loadLeaderboard };
+  if (loaders[page]) loaders[page]();
+}
+
+// ─── DASHBOARD ───
+async function initDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const stats = await api('GET', '/stats');
+  if (stats) {
+    document.getElementById('dash-interventions').textContent = stats.rapports_today;
+    document.getElementById('dash-patients').textContent = stats.patients_actifs;
+    document.getElementById('dash-membres').textContent = stats.total_membres;
+    document.getElementById('dash-services').textContent = stats.total_services;
+  }
+  const rapports = await api('GET', '/rapports');
+  if (rapports) {
+    document.getElementById('dash-rapports-table').innerHTML = rapports.slice(-4).reverse().map(r => `
+      <tr>
+        <td style="font-family:'DM Mono';font-size:11px;color:var(--muted)">${r.date?.slice(0,10)}</td>
+        <td>${r.type}</td>
+        <td>${r.auteur}</td>
+        <td>${statutBadge(r.statut)}</td>
+      </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">Aucun rapport</td></tr>';
+  }
+  const services = await api('GET', '/services');
+  if (services) {
+    document.getElementById('dash-services-table').innerHTML = services.slice(-4).reverse().map(s => {
+      const diff = s.fin ? Math.round((new Date(s.fin)-new Date(s.debut))/60000) : null;
+      const dur = diff ? `${Math.floor(diff/60)}h${diff%60}m` : '—';
+      return `<tr><td>${s.membre}</td><td><span class="badge badge-blue">${s.grade}</span></td><td><span class="badge badge-green">${dur}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">Aucun service</td></tr>';
+  }
+}
+
+// ─── RAPPORTS ───
+async function loadRapports() {
+  const list = await api('GET', '/rapports');
+  renderRapports(list || []);
+}
+
+function renderRapports(list) {
+  document.getElementById('rapports-table').innerHTML = list.slice().reverse().map(r => `
+    <tr>
+      <td style="font-family:'DM Mono';color:var(--muted);font-size:11px">#${String(r.id).padStart(3,'0')}</td>
+      <td style="font-family:'DM Mono';font-size:11px;color:var(--muted)">${r.date?.slice(0,10)}</td>
+      <td>${r.type}</td>
+      <td>${r.lieu}</td>
+      <td>${r.auteur}</td>
+      <td>${graviteBadge(r.gravite)}</td>
+      <td>${statutBadge(r.statut)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRapport(${r.id})">✕</button></td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;font-family:\'DM Mono\'">Aucun rapport</td></tr>';
+}
+
+async function addRapport() {
+  const res = await api('POST', '/rapports', {
+    type: document.getElementById('r-type').value,
+    lieu: document.getElementById('r-lieu').value || 'Non précisé',
+    auteur: document.getElementById('r-auteur').value || currentUser,
+    membres: document.getElementById('r-membres').value || '-',
+    gravite: document.getElementById('r-gravite').value,
+    statut: document.getElementById('r-statut').value,
+    desc: document.getElementById('r-desc').value
+  });
+  if (res) { closeModal('modal-rapport'); loadRapports(); showAlert('Rapport enregistré !'); }
+  else showAlert('❌ Erreur API');
+}
+
+async function deleteRapport(id) {
+  if (!confirm('Supprimer ce rapport ?')) return;
+  await api('DELETE', `/rapports/${id}`);
+  loadRapports(); showAlert('Supprimé !');
+}
+
+// ─── PATIENTS ───
+async function loadPatients() {
+  const list = await api('GET', '/patients');
+  renderPatients(list || []);
+}
+
+function renderPatients(list) {
+  document.getElementById('patients-table').innerHTML = list.slice().reverse().map(p => `
+    <tr>
+      <td style="font-family:'DM Mono';color:var(--muted);font-size:11px">#${String(p.id).padStart(3,'0')}</td>
+      <td><strong>${p.nom}</strong></td>
+      <td>${p.motif}</td>
+      <td>${graviteBadge(p.gravite)}</td>
+      <td>${p.medecin}</td>
+      <td style="font-family:'DM Mono';font-size:11px;color:var(--muted)">${p.date?.slice(0,10)}</td>
+      <td>${patientStatutBadge(p.statut)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">✕</button></td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;font-family:\'DM Mono\'">Aucun patient</td></tr>';
+}
+
+async function addPatient() {
+  const res = await api('POST', '/patients', {
+    nom: document.getElementById('p-nom').value || 'Inconnu',
+    motif: document.getElementById('p-motif').value || '-',
+    gravite: document.getElementById('p-gravite').value,
+    medecin: document.getElementById('p-medecin').value || currentUser,
+    statut: document.getElementById('p-statut').value,
+    notes: document.getElementById('p-notes').value
+  });
+  if (res) { closeModal('modal-patient'); loadPatients(); showAlert('Dossier créé !'); }
+  else showAlert('❌ Erreur API');
+}
+
+async function deletePatient(id) {
+  if (!confirm('Supprimer ce dossier ?')) return;
+  await api('DELETE', `/patients/${id}`);
+  loadPatients(); showAlert('Supprimé !');
+}
+
+// ─── SERVICES ───
+async function loadServices() {
+  const list = await api('GET', '/services');
+  renderServices(list || []);
+}
+
+function renderServices(list) {
+  document.getElementById('services-table').innerHTML = list.slice().reverse().map(s => {
+    const debut = new Date(s.debut);
+    const fin = s.fin ? new Date(s.fin) : null;
+    const diff = fin ? Math.round((fin - debut) / 60000) : null;
+    const dur = diff !== null ? `${Math.floor(diff/60)}h ${diff%60}min` : '<span style="color:var(--orange)">En cours</span>';
+    return `<tr>
+      <td><strong>${s.membre}</strong></td>
+      <td><span class="badge badge-blue">${s.grade}</span></td>
+      <td style="font-family:'DM Mono';font-size:11px">${debut.toLocaleString('fr-FR')}</td>
+      <td style="font-family:'DM Mono';font-size:11px">${fin ? fin.toLocaleString('fr-FR') : '—'}</td>
+      <td><span class="badge badge-green">${dur}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteService(${s.id})">✕</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;font-family:\'DM Mono\'">Aucun service</td></tr>';
+}
+
+async function addService() {
+  const res = await api('POST', '/services', {
+    membre: document.getElementById('s-membre').value || 'Anonyme',
+    grade: document.getElementById('s-grade').value,
+    debut: document.getElementById('s-debut').value || new Date().toISOString(),
+    fin: document.getElementById('s-fin').value || new Date().toISOString()
+  });
+  if (res) { closeModal('modal-service'); loadServices(); showAlert('Service enregistré !'); }
+  else showAlert('❌ Erreur API');
+}
+
+async function deleteService(id) {
+  if (!confirm('Supprimer ce service ?')) return;
+  await api('DELETE', `/services/${id}`);
+  loadServices(); showAlert('Supprimé !');
+}
+
+// ─── MEMBRES ───
+async function loadMembres() {
+  const list = await api('GET', '/membres');
+  renderMembres(list || []);
+}
+
+function renderMembres(list) {
+  document.getElementById('membres-table').innerHTML = list.map(m => `
+    <tr>
+      <td><strong>${m.pseudo}</strong></td>
+      <td><span class="badge badge-blue">${m.grade}</span></td>
+      <td style="font-family:'DM Mono'">${m.services}</td>
+      <td>${membreStatutBadge(m.statut)}</td>
+      <td style="font-family:'DM Mono';color:${m.warns>0?'var(--orange)':'var(--muted)'}">${m.warns} warn(s)</td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="warnMembre(${m.id})">⚠️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMembre(${m.id})">✕</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Aucun membre</td></tr>';
+}
+
+async function addMembre() {
+  const res = await api('POST', '/membres', {
+    pseudo: document.getElementById('m-pseudo').value || 'Nouveau',
+    grade: document.getElementById('m-grade').value,
+    statut: document.getElementById('m-statut').value
+  });
+  if (res) { closeModal('modal-membre'); loadMembres(); showAlert('Membre ajouté !'); }
+  else showAlert('❌ Erreur API');
+}
+
+async function warnMembre(id) {
+  await api('PUT', `/membres/${id}/warn`);
+  loadMembres(); showAlert('Avertissement ajouté !');
+}
+
+async function deleteMembre(id) {
+  if (!confirm('Supprimer ce membre ?')) return;
+  await api('DELETE', `/membres/${id}`);
+  loadMembres(); showAlert('Supprimé !');
+}
+
+// ─── LEADERBOARD ───
+async function loadLeaderboard() {
+  const membres = await api('GET', '/membres') || [];
+  const services = await api('GET', '/services') || [];
+  const colors = ['#f1c40f','#bdc3c7','#e67e22'];
+  const ranks = ['gold','silver','bronze'];
+
+  const byServices = [...membres].sort((a,b) => b.services - a.services);
+  const maxS = byServices[0]?.services || 1;
+  document.getElementById('lb-services').innerHTML = byServices.map((m,i) => `
+    <div class="lb-row">
+      <div class="lb-rank ${ranks[i]||''}">${i+1}</div>
+      <div class="lb-avatar" style="background:${colors[i]||'var(--border)'}">${m.pseudo[0].toUpperCase()}</div>
+      <div class="lb-info"><div class="lb-name">${m.pseudo}</div><div class="lb-meta">${m.grade}</div></div>
+      <div class="lb-bar-wrap"><div class="lb-bar-bg"><div class="lb-bar" style="width:${(m.services/maxS)*100}%"></div></div></div>
+      <div class="lb-score">${m.services}</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-family:\'DM Mono\';font-size:12px;padding:16px">Aucune donnée</div>';
+
+  const memberHours = membres.map(m => {
+    const ms = services.filter(s => s.membre === m.pseudo);
+    const totalMin = ms.reduce((acc, s) => s.fin ? acc + Math.round((new Date(s.fin)-new Date(s.debut))/60000) : acc, 0);
+    return {...m, totalMin, h: Math.floor(totalMin/60), min: totalMin%60};
+  }).sort((a,b) => b.totalMin - a.totalMin);
+
+  const maxH = memberHours[0]?.totalMin || 1;
+  document.getElementById('lb-heures').innerHTML = memberHours.map((m,i) => `
+    <div class="lb-row">
+      <div class="lb-rank ${ranks[i]||''}">${i+1}</div>
+      <div class="lb-avatar" style="background:${colors[i]||'var(--border)'}">${m.pseudo[0].toUpperCase()}</div>
+      <div class="lb-info"><div class="lb-name">${m.pseudo}</div><div class="lb-meta">${m.grade}</div></div>
+      <div class="lb-bar-wrap"><div class="lb-bar-bg"><div class="lb-bar" style="width:${(m.totalMin/maxH)*100}%"></div></div></div>
+      <div class="lb-score" style="font-size:16px">${m.h}h${m.min}m</div>
+    </div>`).join('') || '<div style="color:var(--muted);font-family:\'DM Mono\';font-size:12px;padding:16px">Aucune donnée</div>';
+}
+
+// ─── HELPERS ───
+function graviteBadge(g) {
+  const m = {faible:'badge-green',modere:'badge-orange',grave:'badge-orange',critique:'badge-red',stable:'badge-green'};
+  const l = {faible:'🟢 Faible',modere:'🟡 Modéré',grave:'🟠 Grave',critique:'🔴 Critique',stable:'🟢 Stable'};
+  return `<span class="badge ${m[g]||'badge-muted'}">${l[g]||g}</span>`;
+}
+function statutBadge(s) {
+  const m = {en_cours:'badge-orange',termine:'badge-green',transfere:'badge-blue'};
+  const l = {en_cours:'En cours',termine:'Terminé',transfere:'Transféré'};
+  return `<span class="badge ${m[s]||'badge-muted'}">${l[s]||s}</span>`;
+}
+function patientStatutBadge(s) {
+  const m = {en_cours:'badge-orange',sorti:'badge-green',transfere:'badge-blue',decede:'badge-red'};
+  const l = {en_cours:'En traitement',sorti:'Sorti',transfere:'Transféré',decede:'Décédé'};
+  return `<span class="badge ${m[s]||'badge-muted'}">${l[s]||s}</span>`;
+}
+function membreStatutBadge(s) {
+  const m = {actif:'badge-green',inactif:'badge-muted',suspendu:'badge-red'};
+  return `<span class="badge ${m[s]||'badge-muted'}">${s}</span>`;
+}
+
+function filterTable(tableId, query) {
+  const rows = document.getElementById(tableId).querySelectorAll('tr');
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+function showAlert(msg) {
+  const a = document.getElementById('alert-box');
+  a.textContent = (msg.startsWith('❌') ? '' : '✅ ') + msg;
+  a.style.borderLeftColor = msg.startsWith('❌') ? 'var(--red)' : 'var(--green)';
+  a.style.display = 'block';
+  setTimeout(() => a.style.display = 'none', 3000);
+}
+</script>
+</body>
+</html>

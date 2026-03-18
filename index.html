@@ -349,10 +349,26 @@
 // ══════════════════════════════════════
 //  CONFIG — remplace par ton URL Railway
 // ══════════════════════════════════════
-const API_URL = "https://samuapi.zkrpro902.workers.dev";
+const API_URL = "https://web-XXXXXX.up.railway.app";
 
 let currentUser = null;
 let currentRole = null;
+
+// Restaurer la session au F5
+window.addEventListener('load', () => {
+  const savedUser = sessionStorage.getItem('samuUser');
+  const savedRole = sessionStorage.getItem('samuRole');
+  if (savedUser && savedRole) {
+    currentUser = savedUser;
+    currentRole = savedRole;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('sidebar-username').textContent = currentUser;
+    document.getElementById('sidebar-avatar').textContent = currentUser[0].toUpperCase();
+    document.getElementById('sidebar-role').textContent = currentRole === 'admin' ? 'Administrateur' : 'Membre';
+    initDashboard();
+  }
+});
 
 // ─── API HELPER ───
 async function api(method, endpoint, body = null) {
@@ -387,6 +403,8 @@ async function doLogin() {
   if (res && res.success) {
     currentUser = res.username;
     currentRole = res.role;
+    sessionStorage.setItem('samuUser', currentUser);
+    sessionStorage.setItem('samuRole', currentRole);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     document.getElementById('sidebar-username').textContent = currentUser;
@@ -402,6 +420,8 @@ document.getElementById('login-pass').addEventListener('keydown', e => { if(e.ke
 
 function doLogout() {
   currentUser = null;
+  sessionStorage.removeItem('samuUser');
+  sessionStorage.removeItem('samuRole');
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-user').value = '';
